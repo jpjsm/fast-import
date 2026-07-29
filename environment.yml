@@ -1,0 +1,9 @@
+name: fast-import-py311
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - blake3
+      
