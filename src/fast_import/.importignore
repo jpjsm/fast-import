@@ -1,0 +1,59 @@
+###############################################
+# FastImport Ignore File (.importignore)
+# Generated from SKIP_DIRS, SKIP_FILES, SKIP_WILDCARDS
+###############################################
+
+# -----------------------------
+# Skip directories (match any directory named X)
+# -----------------------------
+$RECYCLE.BIN/
+RECYCLER/
+System Volume Information/
+Recovery/
+MSOCache/
+debug/
+release/
+build/
+.vscode/
+vcpkg_installed/
+__pycache__/
+
+# -----------------------------
+# Skip specific files (exact name match)
+# -----------------------------
+desktop.ini
+thumbs.db
+WHSArchiveConfig.dat
+folder.jpg
+folder.jpeg
+
+# -----------------------------
+# Skip wildcard patterns (files or directories)
+# -----------------------------
+*.dll
+*.so
+*.dylib
+*.obj
+*.lib
+*.slo
+*.exe
+*.msi
+*.tmp
+*.bak
+*.lnk
+*.swp
+*.ini
+*.db
+*.dat
+*.plist
+albumart*.jpg
+albumart*.jpeg
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+mono_crash.*
+*.lock
+*.lock.json
