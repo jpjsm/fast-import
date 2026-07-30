@@ -1,3 +1,4 @@
+# importer.py
 from pathlib import Path
 from typing import Dict
 
@@ -15,6 +16,7 @@ from fs import (
     safe_symlink,
 )
 from ignore import matches_ignore
+from safe_walk import safe_walk
 
 
 def copy_with_dedup(
@@ -26,13 +28,20 @@ def copy_with_dedup(
     ignore_patterns: list[str],
 ) -> None:
 
+    # Build hash index from DB
     hash_index: dict[str, Path] = {}
     for h, dst in db.execute("SELECT hash, dst_path FROM files WHERE hash IS NOT NULL"):
         hash_index[h] = Path(dst)
 
     processed = 0
 
-    for src_path in src_root.rglob("*"):
+    # Use safe walker instead of rglob
+    for src_path in safe_walk(src_root, db, retries=2):
+
+        # Skip root itself (we handle directory creation separately)
+        if src_path == src_root:
+            continue
+
         rel = src_path.relative_to(src_root)
         dst_path = dst_root / rel
 
@@ -73,6 +82,10 @@ def copy_with_dedup(
                 log(f"[RETRY-PREV] Incomplete previous attempt: {src_path}", error=True)
                 prev_dst_path = Path(prev_dst)
                 safe_unlink(prev_dst_path)
+
+            if status == "corrupted_dir":
+                log(f"[SKIP-CORRUPTED-DIR] {src_path}")
+                continue
 
         # --- Directories ---
         if safe_is_dir(src_path):
