@@ -84,4 +84,5 @@ if __name__ == "__main__":
         (r"Z:\\", "JOFREMORENO-NO PELICULAS"),
     ]
     destination = r"C:\Public\Fast-Import"
-    FastImport(sources, destination, progress_count=500)
+    stats_path = Path(destination) / "fastimport-mediadisk1_jofremorenonopeliculas.json"
+    FastImport(sources, destination, progress_count=500, stats_path=stats_path)

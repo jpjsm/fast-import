@@ -2,11 +2,13 @@
 import os
 from pathlib import Path
 from fs import log
+from ignore import matches_ignore
 
 
-def safe_walk(root: Path, db, retries=2):
+def safe_walk(root: Path, db, ignore_patterns, retries=2):
     """
     Crash-resistant directory walker.
+    - Skips ignored directories BEFORE scandir.
     - Retries N times on scandir failure.
     - Logs corrupted directories.
     - Marks corrupted directories in DB.
@@ -20,6 +22,11 @@ def safe_walk(root: Path, db, retries=2):
 
         # Yield the directory itself
         yield current
+
+        # Check ignore BEFORE scandir
+        if matches_ignore(current.name, True, ignore_patterns):
+            log(f"[SKIP-IGNORE] {current}")
+            continue
 
         # Try to list entries
         for attempt in range(1, retries + 1):
@@ -37,15 +44,15 @@ def safe_walk(root: Path, db, retries=2):
 
                 break  # success → stop retry loop
 
-            except FileNotFoundError as e:
-                log(
-                    f"[DIR-MISSING] {current} (attempt {attempt}/{retries}) -> {e}",
-                    error=True,
-                )
-
             except PermissionError as e:
                 log(
                     f"[DIR-PERMISSION] {current} (attempt {attempt}/{retries}) -> {e}",
+                    error=True,
+                )
+
+            except FileNotFoundError as e:
+                log(
+                    f"[DIR-MISSING] {current} (attempt {attempt}/{retries}) -> {e}",
                     error=True,
                 )
 
@@ -67,5 +74,4 @@ def safe_walk(root: Path, db, retries=2):
             except Exception:
                 pass
 
-            # Skip this directory entirely
             continue
