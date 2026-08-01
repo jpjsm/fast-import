@@ -57,3 +57,6 @@ albumart*.jpeg
 mono_crash.*
 *.lock
 *.lock.json
+*.wtv
+*.ithmb
+*.itc

@@ -36,7 +36,7 @@ def copy_with_dedup(
     processed = 0
 
     # Use safe walker instead of rglob
-    for src_path in safe_walk(src_root, db, retries=2):
+    for src_path in safe_walk(src_root, db, ignore_patterns, retries=2):
 
         # Skip root itself (we handle directory creation separately)
         if src_path == src_root:
@@ -95,30 +95,36 @@ def copy_with_dedup(
                 recreate_directory_symlink(src_path, dst_path)
                 mark_done(db, src_path, dst_path, None, "dir_symlink")
                 db.commit()
+                log(f"[NOOP-IS-REPARSE-POINT] {src_path}")
+
                 continue
 
             safe_mkdir(dst_path)
+            log(f"[NOOP-SAFE-MAKEDIR] {src_path}")
             continue
 
         # --- Non-regular files ---
         if not safe_is_regular_file(src_path):
-            log(f"[SKIP] Not a regular file: {src_path}")
+            log(f"[SKIP-NOT-REGULAR-FILE] Not a regular file: {src_path}")
             continue
 
         # --- Files ---
         if not safe_mkdir(dst_path.parent):
+            log(f"[SKIP-NOT-SAFE-MKDIR] Not safe make dir: {src_path}")
             continue
 
         # Hash with retry + safe guard
         try:
             file_hash = hash_file(src_path)
         except Exception:
+            log(f"[ERROR-FAILED-HASH] Failed hashing: {src_path}", error=True)
             continue
 
         mark_pending(db, src_path, dst_path)
 
         if file_hash not in hash_index:
             if not safe_copy(src_path, dst_path, f"copy {src_path}"):
+                log(f"[ERROR-SAFE-COPY] Failed copying: {src_path}", error=True)
                 continue
 
             hash_index[file_hash] = dst_path

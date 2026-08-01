@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import List, Tuple
 
+from datetime import datetime, UTC
 from db import open_db
 from fs import set_log_file, log
 from ignore import load_ignore_file, normalize_patterns
@@ -37,11 +38,11 @@ def FastImport(
     dest_root = Path(destination)
     dest_root.mkdir(parents=True, exist_ok=True)
 
-    log_path = dest_root / "fastimport.log"
+    log_path = dest_root / f"fastimport_{datetime.now().strftime('D%Y%m%dH%H%M%S')}.log"
     log_file = log_path.open("a", encoding="utf-8")
     set_log_file(log_file)
 
-    db = open_db(dest_root / "copy_state.db")
+    db = open_db(dest_root / "fastimport_state.db")
 
     global_counter = {"total": 0}
 

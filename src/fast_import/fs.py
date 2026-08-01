@@ -24,7 +24,8 @@ def log(msg: str, error: bool = False):
                 "local-time": time.asctime(),
                 "timestamp": time.asctime(time.gmtime()),
                 "msg": msg,
-            }
+            },
+            ensure_ascii=False,
         )
         + "\n"
     )
