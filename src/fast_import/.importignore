@@ -1,53 +1,96 @@
 ###############################################
 # FastImport Ignore File (.importignore)
-# Generated from SKIP_DIRS, SKIP_FILES, SKIP_WILDCARDS
+# Corrected + Ideal Version
+# Aggressive policy focused on personal content
 ###############################################
 
-# -----------------------------
-# Skip directories (match any directory named X)
-# -----------------------------
+# ============================================
+# DIRECTORIES TO IGNORE
+# ============================================
+
+# --- System / OS directories ---
 $RECYCLE.BIN/
 RECYCLER/
 System Volume Information/
 Recovery/
 MSOCache/
+
+# --- Development / build directories ---
 debug/
 release/
 build/
 .vscode/
 vcpkg_installed/
+node_modules/
+.git/
+.svn/
+.vs/
 __pycache__/
 
-# -----------------------------
-# Skip specific files (exact name match)
-# -----------------------------
-desktop.ini
-thumbs.db
-WHSArchiveConfig.dat
-folder.jpg
-folder.jpeg
 
-# -----------------------------
-# Skip wildcard patterns (files or directories)
-# -----------------------------
+# ============================================
+# SPECIFIC FILES TO IGNORE
+# ============================================
+
+# --- System junk ---
+desktop.ini
+Thumbs.db
+
+# --- Windows Home Server / Media Center junk ---
+WHSArchiveConfig.dat
+
+# (folder.jpg / folder.jpeg REMOVED — may contain personal content)
+
+
+# ============================================
+# WILDCARD PATTERNS TO IGNORE
+# ============================================
+
+# --------------------------------------------
+# Executables / Installers (never personal)
+# --------------------------------------------
+*.exe
 *.dll
 *.so
 *.dylib
-*.obj
-*.lib
-*.slo
-*.exe
 *.msi
+*.bat
+*.cmd
+*.sh
+*.app
+*.pkg
+*.deb
+*.rpm
+
+# --------------------------------------------
+# System / Cache / Temp Files
+# --------------------------------------------
 *.tmp
 *.bak
 *.lnk
 *.swp
-*.ini
-*.db
-*.dat
+*.cache
+*.old
+*.lock
+*.lock.json
 *.plist
-albumart*.jpg
-albumart*.jpeg
+
+# (REMOVED: *.ini — too broad, only desktop.ini should be ignored)
+# (REMOVED: *.db — too broad, may contain personal metadata)
+# (REMOVED: *.dat — too broad, may contain personal metadata)
+
+# --------------------------------------------
+# Development / Build Artifacts
+# --------------------------------------------
+*.obj
+*.lib
+*.slo
+*.o
+*.class
+*.pyc
+*.pdb
+*.ts
+*.map
 *.rsuser
 *.suo
 *.user
@@ -55,8 +98,49 @@ albumart*.jpeg
 *.sln.docstates
 *.userprefs
 mono_crash.*
-*.lock
-*.lock.json
+
+# --------------------------------------------
+# Non-Personal Media Formats
+# (DVD/Blu-ray rips, DVR recordings, disc images)
+# --------------------------------------------
 *.wtv
+*.ts
+*.m2ts
+*.vob
+*.iso
+*.img
+*.bin
+*.cue
+VIDEO_TS/
+AUDIO_TS/
+
+# --------------------------------------------
+# Archives / Compressed Files
+# (often contain installers or mixed junk)
+# --------------------------------------------
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.bz2
+*.xz
+*.cab
+
+# --------------------------------------------
+# Large Non-Personal Formats
+# --------------------------------------------
+*.apk
+*.ipa
+*.crdownload
+*.part
+*.torrent
+
+# --------------------------------------------
+# Apple iPhoto / iTunes junk
+# --------------------------------------------
 *.ithmb
 *.itc
+
+# (REMOVED: albumart*.jpg — may contain personal artwork)
+# (REMOVED: albumart*.jpeg — may contain personal artwork)

@@ -1,0 +1,88 @@
+# ============================================
+# FastImport Ideal .importignore
+# Aggressive ignore policy for Dedup/Simplify
+# ============================================
+
+# --------------------------------------------
+# Executables / Installers (never personal)
+# --------------------------------------------
+*.exe
+*.dll
+*.msi
+*.bat
+*.cmd
+*.sh
+*.app
+*.pkg
+*.deb
+*.rpm
+*.cab
+*.msu
+
+# --------------------------------------------
+# System / Cache / Temp Files (always junk)
+# --------------------------------------------
+__pycache__/
+*.tmp
+*.cache
+*.log
+*.bak
+*.old
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# --------------------------------------------
+# Development / Build Artifacts (not personal)
+# --------------------------------------------
+*.o
+*.obj
+*.class
+*.pyc
+*.so
+*.dylib
+*.a
+*.lib
+*.pdb
+*.ts
+*.map
+node_modules/
+.git/
+.svn/
+
+# --------------------------------------------
+# Sorce code language (not personal)
+# --------------------------------------------
+*.cs
+*.c
+*.h
+*.cpp
+*.java
+*.py
+*.js
+*.vb
+*.pas
+*.pl
+*.asm
+
+
+
+# --------------------------------------------
+# Non-Personal Media Formats
+# (DVD/Blu-ray rips, DVR recordings, disc images)
+# --------------------------------------------
+*.wtv
+*.ts
+*.m2ts
+*.vob
+VIDEO_TS/
+AUDIO_TS/
+
+# --------------------------------------------
+# Large Non-Personal Formats
+# --------------------------------------------
+*.apk
+*.ipa
+*.crdownload
+*.part
+*.torrent
