@@ -1,78 +1,110 @@
 import os
+import fnmatch
+import yaml
 from pathlib import Path
-from fnmatch import fnmatch
-
-IS_WINDOWS = os.name == "nt"
 
 
-def normalize_patterns(patterns: list[str]) -> list[str]:
-    if IS_WINDOWS:
-        return [p.lower() for p in patterns]
-    return patterns
+class IgnoreEngine:
+    """
+    FastImport ignore rule engine.
+    Loads importignore.yml and provides OS-aware ignore checks for:
+    - folders
+    - files
+    - extensions
+    - wildcard patterns
+    """
 
+    CASE_INSENSITIVE = os.name == "nt"  # Windows only
 
-def load_ignore_file(path: Path) -> list[str]:
-    patterns: list[str] = []
-    if not path.exists():
-        return patterns
+    def __init__(self, yaml_path: Path):
+        self.data = self._load_yaml(yaml_path)
+        self.rules = self._normalize_rules(self.data)
+        self.patterns = self._normalize_patterns(self.data.get("patterns", []))
 
-    try:
+    # ------------------------------------------------------------
+    # YAML LOADING
+    # ------------------------------------------------------------
+    def _load_yaml(self, path: Path):
         with path.open("r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                patterns.append(line)
-    except Exception:
-        # Logging is handled in main module; here we stay pure.
-        pass
+            return yaml.safe_load(f)
 
-    return normalize_patterns(patterns)
+    # ------------------------------------------------------------
+    # NORMALIZATION
+    # ------------------------------------------------------------
+    def _normalize_value(self, value: str) -> str:
+        return value.lower() if self.CASE_INSENSITIVE else value
 
+    def _normalize_patterns(self, patterns):
+        return [self._normalize_value(p) for p in patterns]
 
-def matches_ignore(name: str, is_dir: bool, patterns: list[str]) -> bool:
-    """
-    Semantics:
-    - pattern ending with '/' => directory-only, exact name match (anywhere)
-    - pattern without '/' and without wildcard => exact name match (file or dir)
-    - pattern with wildcard => fnmatch on name (file or dir)
-    - '!pattern' => negation, overrides previous matches
-    """
-    name_cmp = name.lower() if IS_WINDOWS else name
+    def _normalize_rules(self, data):
+        folders = set()
+        files = set()
+        extensions = set()
 
-    matched = False
-    for raw_pattern in patterns:
-        pat = raw_pattern
-        negated = pat.startswith("!")
-        if negated:
-            pat = pat[1:]
+        # Folders
+        for category, entry in data.get("folders", {}).items():
+            for v in entry.get("values", []):
+                folders.add(self._normalize_value(v))
 
-        pat_cmp = pat.lower() if IS_WINDOWS else pat
+        # Files
+        for category, entry in data.get("files", {}).items():
+            for v in entry.get("values", []):
+                files.add(self._normalize_value(v))
 
-        # Directory-only pattern: "lib/"
-        if pat_cmp.endswith("/"):
-            base = pat_cmp[:-1]
-            if is_dir and name_cmp == base:
-                if negated:
-                    matched = False
-                else:
-                    matched = True
-            continue
+        # Extensions
+        for category, entry in data.get("extensions", {}).items():
+            for v in entry.get("values", []):
+                extensions.add(self._normalize_extension(v))
 
-        # Wildcard pattern
-        if any(ch in pat_cmp for ch in "*?"):
-            if fnmatch(name_cmp, pat_cmp):
-                if negated:
-                    matched = False
-                else:
-                    matched = True
-            continue
+        return {
+            "folders": folders,
+            "files": files,
+            "extensions": extensions,
+        }
 
-        # Exact name pattern (file or dir)
-        if name_cmp == pat_cmp:
-            if negated:
-                matched = False
-            else:
-                matched = True
+    # ------------------------------------------------------------
+    # EXTENSION NORMALIZATION
+    # ------------------------------------------------------------
+    def _normalize_extension(self, ext: str) -> str:
+        if not ext:
+            return ""
 
-    return matched
+        # If someone passes a filename instead of an extension
+        if "." in ext:
+            ext = ext.rsplit(".", 1)[-1]
+
+        # Strip leading dots
+        ext = ext.lstrip(".")
+
+        # Extensions should ALWAYS be lowercase
+        # (case-insensitive everywhere)
+        ext = ext.lower()
+
+        return ext
+
+    # ------------------------------------------------------------
+    # IGNORE CHECKS
+    # ------------------------------------------------------------
+    def ignore_folder(self, name: str) -> bool:
+        name = self._normalize_value(name)
+        return name in self.rules["folders"]
+
+    def ignore_file(self, name: str) -> bool:
+        name_norm = self._normalize_value(name)
+
+        # Direct match
+        if name_norm in self.rules["files"]:
+            return True
+
+        # Wildcard patterns
+        if any(fnmatch.fnmatch(name_norm, p) for p in self.patterns):
+            return True
+
+        return False
+
+    def ignore_extension(self, ext: str) -> bool:
+        ext_norm = self._normalize_extension(ext)
+        if not ext_norm:
+            return False
+        return ext_norm in self.rules["extensions"]
