@@ -5,6 +5,12 @@ from fnmatch import fnmatch
 IS_WINDOWS = os.name == "nt"
 
 
+def normalize_patterns(patterns: list[str]) -> list[str]:
+    if IS_WINDOWS:
+        return [p.lower() for p in patterns]
+    return patterns
+
+
 def load_ignore_file(path: Path) -> list[str]:
     patterns: list[str] = []
     if not path.exists():
@@ -21,13 +27,7 @@ def load_ignore_file(path: Path) -> list[str]:
         # Logging is handled in main module; here we stay pure.
         pass
 
-    return patterns
-
-
-def normalize_patterns(patterns: list[str]) -> list[str]:
-    if IS_WINDOWS:
-        return [p.lower() for p in patterns]
-    return patterns
+    return normalize_patterns(patterns)
 
 
 def matches_ignore(name: str, is_dir: bool, patterns: list[str]) -> bool:
