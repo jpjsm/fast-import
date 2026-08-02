@@ -42,14 +42,14 @@ def resolve_ignore_patterns(dest_root: Path, script_dir: Path) -> list[str]:
     patterns = load_ignore_file(global_ignore)
     if patterns:
         log(f"Loaded {len(patterns)} ignore patterns from {global_ignore}")
-        return normalize_patterns(patterns)
+        return patterns
 
     # Option C: fallback .importignore next to script
     local_ignore = script_dir / ".importignore"
     patterns = load_ignore_file(local_ignore)
     if patterns:
         log(f"Loaded {len(patterns)} ignore patterns from {local_ignore}")
-        return normalize_patterns(patterns)
+        return patterns
 
     log("No .importignore found; no ignore patterns loaded")
     return []
