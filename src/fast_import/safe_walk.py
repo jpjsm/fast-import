@@ -2,10 +2,10 @@
 import os
 from pathlib import Path
 from fs import log
-from ignore import matches_ignore
+from ignore import IgnoreEngine
 
 
-def safe_walk(root: Path, db, ignore_patterns, retries=2):
+def safe_walk(root: Path, db, ignore_engine: IgnoreEngine, retries=2):
     """
     Crash-resistant directory walker.
     - Skips ignored directories BEFORE scandir.
@@ -20,13 +20,20 @@ def safe_walk(root: Path, db, ignore_patterns, retries=2):
     while stack:
         current = stack.pop()
 
+        # Check ignore BEFORE scandir
+        if current != root:
+            if (
+                (current.is_dir() and ignore_engine.ignore_folder(current.name))
+                or (current.is_file() and ignore_engine.ignore_file(current.name))
+                or (
+                    current.is_file() and ignore_engine.ignore_extension(current.suffix)
+                )
+            ):
+                log(f"[SKIP-IGNORE] {current}")
+                continue
+
         # Yield the directory itself
         yield current
-
-        # Check ignore BEFORE scandir
-        if matches_ignore(current.name, True, ignore_patterns):
-            log(f"[SKIP-IGNORE] {current}")
-            continue
 
         # Try to list entries
         for attempt in range(1, retries + 1):
@@ -34,6 +41,14 @@ def safe_walk(root: Path, db, ignore_patterns, retries=2):
                 with os.scandir(current) as it:
                     for entry in it:
                         p = Path(entry.path)
+
+                        # ------------------------------------------------------------
+                        # CHILD IGNORE CHECK (BEFORE yield)
+                        # ------------------------------------------------------------
+                        if entry.is_dir(follow_symlinks=False):
+                            if ignore_engine.ignore_folder(entry.name):
+                                log(f"[SKIP-IGNORE] {p}")
+                                continue
 
                         # Yield file or directory
                         yield p

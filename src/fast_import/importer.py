@@ -18,7 +18,7 @@ from fs import (
     safe_copy,
     safe_symlink,
 )
-from ignore import matches_ignore
+from ignore import IgnoreEngine
 from safe_walk import safe_walk
 from control_server import stop_requested, pause_requested, PAUSE_LENGTH
 
@@ -34,10 +34,23 @@ def control_checkpoint():
         raise Exception("Stop requested")
 
     # PAUSE requested
-    while pause_requested.is_set():
-        seconds = PAUSE_LENGTH * 60
-        log(f"[PAUSE] Waiting… paused for {seconds:.1f} seconds")
-        time.sleep(seconds)
+    seconds = int(PAUSE_LENGTH * 60)
+    log(f"[PAUSE] Waiting… paused for {seconds:.1f} seconds")
+
+    while pause_requested.is_set() and seconds > 0:
+        time.sleep(1)
+        seconds -= 1
+
+
+def index_existing_destination(dst_root: Path, db, ignore_engine: IgnoreEngine):
+    for dst_path in safe_walk(dst_root, db, ignore_engine):
+        if dst_path == dst_root:
+            continue
+
+        if safe_is_regular_file(dst_path):
+            file_hash = hash_file(dst_path)
+            mark_done(db, dst_path, dst_path, file_hash, "copied")
+            db.commit()
 
 
 class CopyResult(Enum):
@@ -53,10 +66,12 @@ def copy_with_dedup(
     db,
     progress_count: int,
     global_counter: Dict[str, int],
-    ignore_patterns: list[str],
+    ignore_engine: IgnoreEngine,
 ) -> CopyResult:
     try:
-        # **********************************************************
+        # Index existing destination files
+        index_existing_destination(dst_root, db, ignore_engine)
+
         # Build hash index from DB
         hash_index: dict[str, Path] = {}
         for h, dst in db.execute(
@@ -67,7 +82,7 @@ def copy_with_dedup(
         processed = 0
 
         # Use safe walker instead of rglob
-        for src_path in safe_walk(src_root, db, ignore_patterns, retries=2):
+        for src_path in safe_walk(src_root, db, ignore_engine, retries=2):
             # Check control flags
             control_checkpoint()
 
@@ -89,18 +104,6 @@ def copy_with_dedup(
                     end="",
                     flush=True,
                 )
-
-            name = src_path.name
-
-            # --- Ignore via .importignore ---
-            try:
-                is_dir = safe_is_dir(src_path)
-            except Exception:
-                is_dir = False
-
-            if matches_ignore(name, is_dir, ignore_patterns):
-                log(f"[SKIP-IGNORE] {src_path}")
-                continue
 
             # --- Restart-safe DB check ---
             record = get_record(db, src_path)

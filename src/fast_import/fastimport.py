@@ -7,7 +7,7 @@ from datetime import datetime, UTC
 
 from db import open_db
 from fs import set_log_file, log
-from ignore import load_ignore_file, normalize_patterns
+from ignore import IgnoreEngine
 from importer import copy_with_dedup, CopyResult
 from stats import Stats
 from control_server import (
@@ -36,23 +36,13 @@ signal.signal(signal.SIGINT, request_stop)
 signal.signal(signal.SIGTERM, request_stop)
 
 
-def resolve_ignore_patterns(dest_root: Path, script_dir: Path) -> list[str]:
-    # Option A: global .importignore in destination root
-    global_ignore = dest_root / ".importignore"
-    patterns = load_ignore_file(global_ignore)
-    if patterns:
-        log(f"Loaded {len(patterns)} ignore patterns from {global_ignore}")
-        return patterns
-
-    # Option C: fallback .importignore next to script
-    local_ignore = script_dir / ".importignore"
-    patterns = load_ignore_file(local_ignore)
-    if patterns:
-        log(f"Loaded {len(patterns)} ignore patterns from {local_ignore}")
-        return patterns
-
-    log("No .importignore found; no ignore patterns loaded")
-    return []
+def resolve_ignore_engine(
+    dest_root: Path, use_default_if_failure: bool
+) -> IgnoreEngine:
+    project_ignore_path = dest_root / "importignore.yml"
+    return IgnoreEngine(
+        project_ignore_path, use_default_on_failure=use_default_if_failure
+    )
 
 
 def FastImport(
@@ -72,11 +62,10 @@ def FastImport(
 
     global_counter = {"total": 0}
 
-    script_dir = Path(__file__).resolve().parent
-    ignore_patterns = resolve_ignore_patterns(dest_root, script_dir)
+    ignore_engine = resolve_ignore_engine(dest_root, use_default_if_failure=True)
 
     stats = Stats()
-    stats.global_counters["ignore_patterns_used"] = ignore_patterns
+    stats.global_counters["ignore_engine"] = "Ignore Engine active"
 
     # Expose stats/status providers to control_server (optional, can refine later)
     def _status_provider():
@@ -106,7 +95,7 @@ def FastImport(
 
             dst.mkdir(parents=True, exist_ok=True)
             result = copy_with_dedup(
-                src, dst, db, progress_count, global_counter, ignore_patterns
+                src, dst, db, progress_count, global_counter, ignore_engine
             )
 
             log(RESULT_HANDLERS.get(result, lambda s: "[INFO] Unknown result")(src_str))

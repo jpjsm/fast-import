@@ -3,6 +3,8 @@ import fnmatch
 import yaml
 from pathlib import Path
 
+from fast_import.importignore import DEFAULT_IMPORTIGNORE
+
 
 class IgnoreEngine:
     """
@@ -12,21 +14,45 @@ class IgnoreEngine:
     - files
     - extensions
     - wildcard patterns
+
+    Supports fallback to built-in default rules if the provided YAML
+    is missing or corrupted.
     """
 
     CASE_INSENSITIVE = os.name == "nt"  # Windows only
 
-    def __init__(self, yaml_path: Path):
+    def __init__(self, yaml_path: Path | None, use_default_on_failure: bool = True):
+        self.use_default_on_failure = use_default_on_failure
+
         self.data = self._load_yaml(yaml_path)
         self.rules = self._normalize_rules(self.data)
         self.patterns = self._normalize_patterns(self.data.get("patterns", []))
 
     # ------------------------------------------------------------
-    # YAML LOADING
+    # YAML LOADING WITH FALLBACK
     # ------------------------------------------------------------
-    def _load_yaml(self, path: Path):
-        with path.open("r", encoding="utf-8") as f:
-            return yaml.safe_load(f)
+    def _load_yaml(self, path: Path | None):
+        if path is not None:
+            try:
+                with path.open("r", encoding="utf-8") as f:
+                    return yaml.safe_load(f)
+            except Exception as e:
+                if not self.use_default_on_failure:
+                    raise RuntimeError(
+                        f"Failed to load importignore.yml at {path}: {e}"
+                    )
+                # Fall back to default
+                print(f"Warning: using default importignore.yml because {path} failed")
+
+        # Load built-in default YAML
+        return self._load_default_yaml()
+
+    def _load_default_yaml(self):
+        """
+        Built-in default ignore rules.
+        This can be replaced with a bundled YAML file or a static dict.
+        """
+        return DEFAULT_IMPORTIGNORE
 
     # ------------------------------------------------------------
     # NORMALIZATION
@@ -78,7 +104,6 @@ class IgnoreEngine:
         ext = ext.lstrip(".")
 
         # Extensions should ALWAYS be lowercase
-        # (case-insensitive everywhere)
         ext = ext.lower()
 
         return ext
